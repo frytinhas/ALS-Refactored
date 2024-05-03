@@ -391,7 +391,7 @@ public:
 private:
 	void SetDesiredVelocityYawAngle(float NewDesiredVelocityYawAngle);
 
-	void RefreshLocomotionLocationAndRotation();
+	virtual void RefreshLocomotionLocationAndRotation();
 
 	void RefreshLocomotionEarly();
 

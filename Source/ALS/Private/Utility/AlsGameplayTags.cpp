@@ -10,6 +10,10 @@ namespace AlsLocomotionModeTags
 {
 	UE_DEFINE_GAMEPLAY_TAG(Grounded, FName{TEXTVIEW("Als.LocomotionMode.Grounded")})
 	UE_DEFINE_GAMEPLAY_TAG(InAir, FName{TEXTVIEW("Als.LocomotionMode.InAir")})
+	UE_DEFINE_GAMEPLAY_TAG(Climbing, FName{TEXTVIEW("Als.LocomotionMode.Climbing")})
+	UE_DEFINE_GAMEPLAY_TAG(Ziplining, FName{TEXTVIEW("Als.LocomotionMode.Ziplining")})
+	UE_DEFINE_GAMEPLAY_TAG(Grabbed, FName{TEXTVIEW("Als.LocomotionMode.Grabbed")})
+	UE_DEFINE_GAMEPLAY_TAG(Swimming, FName{TEXTVIEW("Als.LocomotionMode.Swimming")})
 }
 
 namespace AlsRotationModeTags
@@ -23,6 +27,8 @@ namespace AlsStanceTags
 {
 	UE_DEFINE_GAMEPLAY_TAG(Standing, FName{TEXTVIEW("Als.Stance.Standing")})
 	UE_DEFINE_GAMEPLAY_TAG(Crouching, FName{TEXTVIEW("Als.Stance.Crouching")})
+	UE_DEFINE_GAMEPLAY_TAG(Proning, FName{TEXTVIEW("Als.Stance.Proning")})
+	UE_DEFINE_GAMEPLAY_TAG(Sliding, FName{TEXTVIEW("Als.Stance.Sliding")})
 }
 
 namespace AlsGaitTags
