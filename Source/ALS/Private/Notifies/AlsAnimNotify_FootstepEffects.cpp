@@ -185,6 +185,8 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 		VolumeMultiplier *= 1.0f - UAlsMath::Clamp01(Mesh->GetAnimInstance()->GetCurveValue(UAlsConstants::FootstepSoundBlockCurveName()));
 	}
 
+	const auto* Character{Cast<AAlsCharacter>(Mesh->GetOwner())};
+
 	if (!FAnimWeight::IsRelevant(VolumeMultiplier) || !IsValid(EffectSettings.Sound.LoadSynchronous()))
 	{
 		return;
@@ -200,12 +202,20 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 		{
 			UGameplayStatics::PlaySoundAtLocation(World, EffectSettings.Sound.Get(), FootstepLocation,
 			                                      VolumeMultiplier, SoundPitchMultiplier);
+
+			UGameplayStatics::SpawnSoundAtLocation(World, IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), FootstepLocation,
+														   FootstepRotation.Rotator(),
+														   VolumeMultiplier, SoundPitchMultiplier);
 		}
 		else
 		{
 			Audio = UGameplayStatics::SpawnSoundAtLocation(World, EffectSettings.Sound.Get(), FootstepLocation,
 			                                               FootstepRotation.Rotator(),
 			                                               VolumeMultiplier, SoundPitchMultiplier);
+
+			UGameplayStatics::SpawnSoundAtLocation(World, IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), FootstepLocation,
+            			                                               FootstepRotation.Rotator(),
+            			                                               VolumeMultiplier, SoundPitchMultiplier);
 		}
 	}
 	else if (EffectSettings.SoundSpawnMode == EAlsFootstepSoundSpawnMode::SpawnAttachedToFootBone)
@@ -217,6 +227,10 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 		Audio = UGameplayStatics::SpawnSoundAttached(EffectSettings.Sound.Get(), Mesh, FootBoneName, FVector::ZeroVector,
 		                                             FRotator::ZeroRotator, EAttachLocation::SnapToTarget,
 		                                             true, VolumeMultiplier, SoundPitchMultiplier);
+
+		UGameplayStatics::SpawnSoundAttached(IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), Mesh, FootBoneName, FVector::ZeroVector,
+													 FRotator::ZeroRotator, EAttachLocation::SnapToTarget,
+													 true, VolumeMultiplier, SoundPitchMultiplier);
 	}
 
 	if (IsValid(Audio))

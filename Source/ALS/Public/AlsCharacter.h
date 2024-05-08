@@ -8,6 +8,7 @@
 #include "State/AlsRollingState.h"
 #include "State/AlsViewState.h"
 #include "Utility/AlsGameplayTags.h"
+#include "Utility/AlsInterface.h"
 #include "AlsCharacter.generated.h"
 
 struct FAlsMantlingParameters;
@@ -578,6 +579,8 @@ private:
 	FVector RagdollTraceGround(bool& bGrounded) const;
 
 	void LimitRagdollSpeed() const;
+
+	
 
 	// Debug
 
