@@ -13,6 +13,7 @@
 #include "Sound/SoundBase.h"
 #include "Utility/AlsConstants.h"
 #include "Utility/AlsEnumUtility.h"
+#include "Utility/AlsInterface.h"
 #include "Utility/AlsMacros.h"
 #include "Utility/AlsMath.h"
 #include "Utility/AlsUtility.h"
@@ -197,12 +198,12 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 	if (EffectSettings.SoundSpawnMode == EAlsFootstepSoundSpawnMode::SpawnAtTraceHitLocation)
 	{
 		const auto* World{Mesh->GetWorld()};
-
+		
 		if (World->WorldType == EWorldType::EditorPreview)
 		{
 			UGameplayStatics::PlaySoundAtLocation(World, EffectSettings.Sound.Get(), FootstepLocation,
-			                                      VolumeMultiplier, SoundPitchMultiplier);
-
+												  VolumeMultiplier, SoundPitchMultiplier);
+			
 			UGameplayStatics::SpawnSoundAtLocation(World, IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), FootstepLocation,
 														   FootstepRotation.Rotator(),
 														   VolumeMultiplier, SoundPitchMultiplier);
@@ -210,12 +211,12 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 		else
 		{
 			Audio = UGameplayStatics::SpawnSoundAtLocation(World, EffectSettings.Sound.Get(), FootstepLocation,
-			                                               FootstepRotation.Rotator(),
-			                                               VolumeMultiplier, SoundPitchMultiplier);
-
+														   FootstepRotation.Rotator(),
+														   VolumeMultiplier, SoundPitchMultiplier);
+			
 			UGameplayStatics::SpawnSoundAtLocation(World, IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), FootstepLocation,
-            			                                               FootstepRotation.Rotator(),
-            			                                               VolumeMultiplier, SoundPitchMultiplier);
+																	   FootstepRotation.Rotator(),
+																	   VolumeMultiplier, SoundPitchMultiplier);
 		}
 	}
 	else if (EffectSettings.SoundSpawnMode == EAlsFootstepSoundSpawnMode::SpawnAttachedToFootBone)
@@ -225,9 +226,9 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 		};
 
 		Audio = UGameplayStatics::SpawnSoundAttached(EffectSettings.Sound.Get(), Mesh, FootBoneName, FVector::ZeroVector,
-		                                             FRotator::ZeroRotator, EAttachLocation::SnapToTarget,
-		                                             true, VolumeMultiplier, SoundPitchMultiplier);
-
+													 FRotator::ZeroRotator, EAttachLocation::SnapToTarget,
+													 true, VolumeMultiplier, SoundPitchMultiplier);
+	
 		UGameplayStatics::SpawnSoundAttached(IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), Mesh, FootBoneName, FVector::ZeroVector,
 													 FRotator::ZeroRotator, EAttachLocation::SnapToTarget,
 													 true, VolumeMultiplier, SoundPitchMultiplier);
