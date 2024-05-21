@@ -6,7 +6,9 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/WorldSettings.h"
 #include "Utility/AlsCameraConstants.h"
+#include "Utility/AlsDebugUtility.h"
 #include "Utility/AlsMacros.h"
+#include "Utility/AlsRotation.h"
 #include "Utility/AlsUtility.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AlsCameraComponent)
@@ -159,7 +161,7 @@ void UAlsCameraComponent::TickCamera(const float DeltaTime, bool bAllowLag)
 
 #if ENABLE_DRAW_DEBUG
 	const auto bDisplayDebugCameraShapes{
-		UAlsUtility::ShouldDisplayDebugForActor(GetOwner(), UAlsCameraConstants::CameraShapesDebugDisplayName())
+		UAlsDebugUtility::ShouldDisplayDebugForActor(GetOwner(), UAlsCameraConstants::CameraShapesDebugDisplayName())
 	};
 #else
 	const auto bDisplayDebugCameraShapes{false};
@@ -242,12 +244,12 @@ void UAlsCameraComponent::TickCamera(const float DeltaTime, bool bAllowLag)
 		CameraRotation = CalculateCameraRotation(CameraTargetRotation, DeltaTime, bAllowLag);
 	}
 
-	const FRotator CameraYawRotation{0.0f, CameraRotation.Yaw, 0.0f};
+	const FQuat CameraYawRotation{FVector::ZAxisVector, FMath::DegreesToRadians(CameraRotation.Yaw)};
 
 #if ENABLE_DRAW_DEBUG
 	if (bDisplayDebugCameraShapes)
 	{
-		UAlsUtility::DrawDebugSphereAlternative(GetWorld(), PivotTargetLocation, CameraYawRotation, 16.0f, FLinearColor::Green);
+		UAlsDebugUtility::DrawSphereAlternative(GetWorld(), PivotTargetLocation, CameraYawRotation.Rotator(), 16.0f, FLinearColor::Green);
 	}
 #endif
 
@@ -257,13 +259,13 @@ void UAlsCameraComponent::TickCamera(const float DeltaTime, bool bAllowLag)
 	{
 		PivotLagLocation = MovementBaseLocation + MovementBaseRotation.RotateVector(PivotMovementBaseRelativeLagLocation);
 
-		PivotLagLocation = CalculatePivotLagLocation(CameraYawRotation.Quaternion(), DeltaTime, bAllowLag);
+		PivotLagLocation = CalculatePivotLagLocation(CameraYawRotation, DeltaTime, bAllowLag);
 
 		PivotMovementBaseRelativeLagLocation = MovementBaseRotation.UnrotateVector(PivotLagLocation - MovementBaseLocation);
 	}
 	else
 	{
-		PivotLagLocation = CalculatePivotLagLocation(CameraYawRotation.Quaternion(), DeltaTime, bAllowLag);
+		PivotLagLocation = CalculatePivotLagLocation(CameraYawRotation, DeltaTime, bAllowLag);
 	}
 
 #if ENABLE_DRAW_DEBUG
@@ -271,9 +273,9 @@ void UAlsCameraComponent::TickCamera(const float DeltaTime, bool bAllowLag)
 	{
 		DrawDebugLine(GetWorld(), PivotLagLocation, PivotTargetLocation,
 		              FLinearColor{1.0f, 0.5f, 0.0f}.ToFColor(true),
-		              false, 0.0f, 0, UAlsUtility::DrawLineThickness);
+		              false, 0.0f, 0, UAlsDebugUtility::DrawLineThickness);
 
-		UAlsUtility::DrawDebugSphereAlternative(GetWorld(), PivotLagLocation, CameraYawRotation, 16.0f, {1.0f, 0.5f, 0.0f});
+		UAlsDebugUtility::DrawSphereAlternative(GetWorld(), PivotLagLocation, CameraYawRotation.Rotator(), 16.0f, {1.0f, 0.5f, 0.0f});
 	}
 #endif
 
@@ -288,9 +290,9 @@ void UAlsCameraComponent::TickCamera(const float DeltaTime, bool bAllowLag)
 	{
 		DrawDebugLine(GetWorld(), PivotLocation, PivotLagLocation,
 		              FLinearColor{0.0f, 0.75f, 1.0f}.ToFColor(true),
-		              false, 0.0f, 0, UAlsUtility::DrawLineThickness);
+		              false, 0.0f, 0, UAlsDebugUtility::DrawLineThickness);
 
-		UAlsUtility::DrawDebugSphereAlternative(GetWorld(), PivotLocation, CameraYawRotation, 16.0f, {0.0f, 0.75f, 1.0f});
+		UAlsDebugUtility::DrawSphereAlternative(GetWorld(), PivotLocation, CameraYawRotation.Rotator(), 16.0f, {0.0f, 0.75f, 1.0f});
 	}
 #endif
 
@@ -300,16 +302,16 @@ void UAlsCameraComponent::TickCamera(const float DeltaTime, bool bAllowLag)
 
 	// Trace for an object between the camera and character to apply a corrective offset.
 
-	const auto CameraResultLocation{CalculateCameraTrace(CameraTargetLocation, PivotOffset, DeltaTime, bAllowLag, TraceDistanceRatio)};
+	const auto CameraFinalLocation{CalculateCameraTrace(CameraTargetLocation, PivotOffset, DeltaTime, bAllowLag, TraceDistanceRatio)};
 
 	if (!FAnimWeight::IsRelevant(FirstPersonOverride))
 	{
-		CameraLocation = CameraResultLocation;
+		CameraLocation = CameraFinalLocation;
 		CameraFieldOfView = Settings->ThirdPerson.FieldOfView;
 	}
 	else
 	{
-		CameraLocation = FMath::Lerp(CameraResultLocation, GetFirstPersonCameraLocation(), FirstPersonOverride);
+		CameraLocation = FMath::Lerp(CameraFinalLocation, GetFirstPersonCameraLocation(), FirstPersonOverride);
 		CameraFieldOfView = FMath::Lerp(Settings->ThirdPerson.FieldOfView, Settings->FirstPerson.FieldOfView, FirstPersonOverride);
 	}
 
@@ -335,7 +337,7 @@ FRotator UAlsCameraComponent::CalculateCameraRotation(const FRotator& CameraTarg
 	    DeltaTime <= Settings->CameraLagSubstepping.LagSubstepDeltaTime ||
 	    RotationLag <= 0.0f)
 	{
-		return UAlsMath::ExponentialDecay(CameraRotation, CameraTargetRotation, DeltaTime, RotationLag);
+		return UAlsRotation::ExponentialDecayRotation(CameraRotation, CameraTargetRotation, DeltaTime, RotationLag);
 	}
 
 	const auto CameraInitialRotation{CameraRotation};
@@ -454,7 +456,7 @@ FVector UAlsCameraComponent::CalculateCameraTrace(const FVector& CameraTargetLoc
 {
 #if ENABLE_DRAW_DEBUG
 	const auto bDisplayDebugCameraTraces{
-		UAlsUtility::ShouldDisplayDebugForActor(GetOwner(), UAlsCameraConstants::CameraTracesDebugDisplayName())
+		UAlsDebugUtility::ShouldDisplayDebugForActor(GetOwner(), UAlsCameraConstants::CameraTracesDebugDisplayName())
 	};
 #else
 	const auto bDisplayDebugCameraTraces{false};
@@ -500,7 +502,7 @@ FVector UAlsCameraComponent::CalculateCameraTrace(const FVector& CameraTargetLoc
 #if ENABLE_DRAW_DEBUG
 	if (bDisplayDebugCameraTraces)
 	{
-		UAlsUtility::DrawDebugSweepSphere(GetWorld(), TraceStart, TraceResult, Settings->ThirdPerson.TraceRadius * MeshScale,
+		UAlsDebugUtility::DrawSweepSphere(GetWorld(), TraceStart, TraceResult, Settings->ThirdPerson.TraceRadius * MeshScale,
 		                                  Hit.IsValidBlockingHit() ? FLinearColor::Red : FLinearColor::Green);
 	}
 #endif
@@ -600,7 +602,7 @@ bool UAlsCameraComponent::TryAdjustLocationBlockedByGeometry(FVector& Location, 
 	{
 		DrawDebugLine(GetWorld(), Location, Location + Adjustment,
 		              FLinearColor{0.0f, 0.75f, 1.0f}.ToFColor(true),
-		              false, 5.0f, 0, UAlsUtility::DrawLineThickness);
+		              false, 5.0f, 0, UAlsDebugUtility::DrawLineThickness);
 	}
 #endif
 
