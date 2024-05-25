@@ -462,7 +462,7 @@ protected:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "ALS|Character")
-	void StartRolling(float PlayRate = 1.0f);
+	virtual void StartRolling(float PlayRate = 1.0f);
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Als Character")
 	UAnimMontage* SelectRollMontage();
