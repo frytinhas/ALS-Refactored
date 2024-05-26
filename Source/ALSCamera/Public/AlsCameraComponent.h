@@ -15,6 +15,10 @@ class ALSCAMERA_API UAlsCameraComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 
+public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	TObjectPtr<ACharacter> Character;
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings")
 	TObjectPtr<UAlsCameraSettings> Settings;
@@ -28,9 +32,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings", Meta = (ClampMin = 0, ClampMax = 1))
 	float PostProcessWeight{0.0f};
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	TObjectPtr<ACharacter> Character;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient, Meta = (ShowInnerProperties))
 	TWeakObjectPtr<UAnimInstance> AnimationInstance;
@@ -113,7 +114,7 @@ public:
 	void SetRightShoulder(bool bNewRightShoulder);
 
 	UFUNCTION(BlueprintPure, Category = "ALS|Camera", Meta = (ReturnDisplayName = "Camera Location"))
-	FVector GetFirstPersonCameraLocation() const;
+	virtual FVector GetFirstPersonCameraLocation() const;
 
 	UFUNCTION(BlueprintPure, Category = "ALS|Camera", Meta = (ReturnDisplayName = "Pivot Location"))
 	FVector GetThirdPersonPivotLocation() const;
