@@ -271,7 +271,8 @@ void AAlsCharacter::OnRep_ReplicatedBasedMovement()
 
 void AAlsCharacter::Tick(const float DeltaTime)
 {
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AAlsCharacter::Tick()"), STAT_AAlsCharacter_Tick, STATGROUP_Als)
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AAlsCharacter::Tick"), STAT_AAlsCharacter_Tick, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(AAlsCharacter::Tick);
 
 	if (!IsValid(Settings) || !AnimationInstance.IsValid())
 	{
@@ -1659,7 +1660,7 @@ bool AAlsCharacter::ConstrainAimingRotation(FRotator& ActorRotation, const float
 		return false;
 	}
 
-	ViewRelativeAngle = UAlsRotation::RemapAngleForCounterClockwiseRotation(ViewRelativeAngle);
+	ViewRelativeAngle = UAlsRotation::RemapAngleForClockwiseRotation(ViewRelativeAngle);
 
 	// Secondary constraint. Simply increases the actor's rotation speed. Typically only used when the actor is standing still.
 

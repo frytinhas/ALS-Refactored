@@ -41,8 +41,9 @@ void UAlsAnimationInstance::NativeBeginPlay()
 
 void UAlsAnimationInstance::NativeUpdateAnimation(const float DeltaTime)
 {
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativeUpdateAnimation()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativeUpdateAnimation"),
 	                            STAT_UAlsAnimationInstance_NativeUpdateAnimation, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::NativeUpdateAnimation);
 
 	Super::NativeUpdateAnimation(DeltaTime);
 
@@ -96,8 +97,9 @@ void UAlsAnimationInstance::NativeUpdateAnimation(const float DeltaTime)
 
 void UAlsAnimationInstance::NativeThreadSafeUpdateAnimation(const float DeltaTime)
 {
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativeThreadSafeUpdateAnimation()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativeThreadSafeUpdateAnimation"),
 	                            STAT_UAlsAnimationInstance_NativeThreadSafeUpdateAnimation, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::NativeThreadSafeUpdateAnimation);
 
 	Super::NativeThreadSafeUpdateAnimation(DeltaTime);
 
@@ -122,8 +124,9 @@ void UAlsAnimationInstance::NativePostUpdateAnimation()
 	// Can't use UAnimationInstance::NativePostEvaluateAnimation() instead this function, as it will not be called if
 	// USkinnedMeshComponent::VisibilityBasedAnimTickOption is set to EVisibilityBasedAnimTickOption::AlwaysTickPose.
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativePostUpdateAnimation()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativePostUpdateAnimation"),
 	                            STAT_UAlsAnimationInstance_NativePostUpdateAnimation, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::NativePostUpdateAnimation);
 
 	if (!IsValid(Settings) || !IsValid(Character))
 	{
@@ -437,7 +440,8 @@ void UAlsAnimationInstance::RefreshLook()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshLook()"), STAT_UAlsAnimationInstance_RefreshLook, STATGROUP_Als)
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshLook"), STAT_UAlsAnimationInstance_RefreshLook, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshLook);
 
 	if (!IsValid(Settings))
 	{
@@ -487,9 +491,9 @@ void UAlsAnimationInstance::RefreshLook()
 		const auto YawAngle{FRotator3f::NormalizeAxis(LookState.WorldYawAngle - ActorYawAngle)};
 		auto DeltaYawAngle{FRotator3f::NormalizeAxis(TargetYawAngle - YawAngle)};
 
-		if (DeltaYawAngle > 180.0f - UAlsRotation::CounterClockwiseRotationAngleThreshold)
+		if (DeltaYawAngle < -180.0f + UAlsRotation::ClockwiseRotationAngleThreshold)
 		{
-			DeltaYawAngle -= 360.0f;
+			DeltaYawAngle += 360.0f;
 		}
 		else if (FMath::Abs(LocomotionState.YawSpeed) > UE_SMALL_NUMBER && FMath::Abs(TargetYawAngle) > 90.0f)
 		{
@@ -585,8 +589,8 @@ void UAlsAnimationInstance::RefreshGrounded()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshGrounded()"),
-	                            STAT_UAlsAnimationInstance_RefreshGrounded, STATGROUP_Als)
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshGrounded"), STAT_UAlsAnimationInstance_RefreshGrounded, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshGrounded);
 
 	if (!IsValid(Settings))
 	{
@@ -608,13 +612,18 @@ FVector2f UAlsAnimationInstance::GetRelativeAccelerationAmount() const
 	// character rotation. It is normalized to a range of -1 to 1 so that -1 equals the max
 	// braking deceleration and 1 equals the max acceleration of the character movement component.
 
-	const FVector3f RelativeAcceleration{LocomotionState.RotationQuaternion.UnrotateVector(LocomotionState.Acceleration)};
-
 	const auto MaxAcceleration{
 		(LocomotionState.Acceleration | LocomotionState.Velocity) >= 0.0f
 			? LocomotionState.MaxAcceleration
 			: LocomotionState.MaxBrakingDeceleration
 	};
+
+	if (MaxAcceleration <= UE_KINDA_SMALL_NUMBER)
+	{
+		return FVector2f::ZeroVector;
+	}
+
+	const FVector3f RelativeAcceleration{LocomotionState.RotationQuaternion.UnrotateVector(LocomotionState.Acceleration)};
 
 	return FVector2f{UAlsVector::ClampMagnitude01(RelativeAcceleration / MaxAcceleration)};
 }
@@ -695,8 +704,9 @@ void UAlsAnimationInstance::RefreshGroundedMovement()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshGroundedMovement()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshGroundedMovement"),
 	                            STAT_UAlsAnimationInstance_RefreshGroundedMovement, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshGroundedMovement);
 
 	if (!IsValid(Settings))
 	{
@@ -760,8 +770,9 @@ void UAlsAnimationInstance::RefreshStandingMovement()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshStandingMovement()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshStandingMovement"),
 	                            STAT_UAlsAnimationInstance_RefreshStandingMovement, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshStandingMovement);
 
 	if (!IsValid(Settings))
 	{
@@ -845,8 +856,9 @@ void UAlsAnimationInstance::RefreshCrouchingMovement()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshCrouchingMovement()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshCrouchingMovement"),
 	                            STAT_UAlsAnimationInstance_RefreshCrouchingMovement, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshCrouchingMovement);
 
 	if (!IsValid(Settings))
 	{
@@ -879,7 +891,8 @@ void UAlsAnimationInstance::RefreshInAir()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshInAir()"), STAT_UAlsAnimationInstance_RefreshInAir, STATGROUP_Als)
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshInAir"), STAT_UAlsAnimationInstance_RefreshInAir, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshInAir);
 
 	if (!IsValid(Settings))
 	{
@@ -1264,7 +1277,8 @@ void UAlsAnimationInstance::RefreshFootLock(FAlsFootState& FootState, const FNam
 	}
 
 	FinalLocation = FMath::Lerp(FinalLocation, FootState.LockLocation, FootState.LockAmount);
-	FinalRotation = FQuat::Slerp(FinalRotation, FootState.LockRotation, FootState.LockAmount);
+	FinalRotation = FQuat::FastLerp(FinalRotation, FootState.LockRotation, FootState.LockAmount);
+	FinalRotation.Normalize();
 }
 
 void UAlsAnimationInstance::RefreshFootOffset(FAlsFootState& FootState, const float DeltaTime,
@@ -1293,8 +1307,10 @@ void UAlsAnimationInstance::RefreshFootOffset(FAlsFootState& FootState, const fl
 		{
 			static constexpr auto InterpolationSpeed{15.0f};
 
-			FootState.OffsetLocationZ = FMath::FInterpTo(FootState.OffsetLocationZ, 0.0f, DeltaTime, InterpolationSpeed);
-			FootState.OffsetRotation = FMath::QInterpTo(FootState.OffsetRotation, FQuat::Identity, DeltaTime, InterpolationSpeed);
+			FootState.OffsetLocationZ *= 1.0f - UAlsMath::Clamp01(DeltaTime * InterpolationSpeed);
+
+			FootState.OffsetRotation = UAlsRotation::InterpolateQuaternionFast(FootState.OffsetRotation, FQuat::Identity,
+			                                                                   DeltaTime, InterpolationSpeed);
 
 			FinalLocation.Z += FootState.OffsetLocationZ;
 			FinalRotation = FootState.OffsetRotation * FinalRotation;
@@ -1379,8 +1395,8 @@ void UAlsAnimationInstance::RefreshFootOffset(FAlsFootState& FootState, const fl
 
 		static constexpr auto RotationInterpolationSpeed{30.0f};
 
-		FootState.OffsetRotation = FMath::QInterpTo(FootState.OffsetRotation, FootState.OffsetTargetRotation,
-		                                            DeltaTime, RotationInterpolationSpeed);
+		FootState.OffsetRotation = UAlsRotation::InterpolateQuaternionFast(FootState.OffsetRotation, FootState.OffsetTargetRotation,
+		                                                                   DeltaTime, RotationInterpolationSpeed);
 	}
 
 	FinalLocation.Z += FootState.OffsetLocationZ;
@@ -1429,6 +1445,7 @@ void UAlsAnimationInstance::ConstraintFootRotation(const FAlsFootConstraintsSett
 	const FQuat NewTwist(NewTwistX, 0.0f, 0.0f, FMath::Sqrt(FMath::Max(0.0f, 1.0f - NewTwistX * NewTwistX)));
 
 	Rotation = ParentRotation * (NewSwing * NewTwist);
+	Rotation.Normalize();
 }
 
 void UAlsAnimationInstance::PlayQuickStopAnimation()
@@ -1450,7 +1467,7 @@ void UAlsAnimationInstance::PlayQuickStopAnimation()
 			(LocomotionState.bHasInput ? LocomotionState.InputYawAngle : LocomotionState.TargetYawAngle) - LocomotionState.Rotation.Yaw))
 	};
 
-	RemainingYawAngle = UAlsRotation::RemapAngleForCounterClockwiseRotation(RemainingYawAngle);
+	RemainingYawAngle = UAlsRotation::RemapAngleForClockwiseRotation(RemainingYawAngle);
 
 	// Scale quick stop animation play rate based on how far the character
 	// is going to rotate. At 180 degrees, the play rate will be maximal.
@@ -1546,8 +1563,9 @@ void UAlsAnimationInstance::RefreshDynamicTransitions()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshDynamicTransitions()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshDynamicTransitions"),
 	                            STAT_UAlsAnimationInstance_RefreshDynamicTransitions, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshDynamicTransitions);
 
 	if (DynamicTransitionsState.bUpdatedThisFrame || !IsValid(Settings))
 	{
@@ -1692,8 +1710,9 @@ void UAlsAnimationInstance::RefreshRotateInPlace()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshRotateInPlace()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshRotateInPlace"),
 	                            STAT_UAlsAnimationInstance_RefreshRotateInPlace, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshRotateInPlace);
 
 	if (RotateInPlaceState.bUpdatedThisFrame || !IsValid(Settings))
 	{
@@ -1766,8 +1785,9 @@ void UAlsAnimationInstance::RefreshTurnInPlace()
 	}
 #endif
 
-	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshTurnInPlace()"),
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshTurnInPlace"),
 	                            STAT_UAlsAnimationInstance_RefreshTurnInPlace, STATGROUP_Als)
+	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshTurnInPlace);
 
 	if (TurnInPlaceState.bUpdatedThisFrame || !IsValid(Settings))
 	{
@@ -1810,10 +1830,7 @@ void UAlsAnimationInstance::RefreshTurnInPlace()
 
 	// Select settings based on turn angle and stance.
 
-	const auto bTurnLeft{
-		ViewState.YawAngle <= 0.0f ||
-		ViewState.YawAngle > 180.0f - UAlsRotation::CounterClockwiseRotationAngleThreshold
-	};
+	const auto bTurnLeft{UAlsRotation::RemapAngleForClockwiseRotation(ViewState.YawAngle) <= 0.0f};
 
 	UAlsTurnInPlaceSettings* TurnInPlaceSettings{nullptr};
 	FName TurnInPlaceSlotName;
