@@ -210,9 +210,11 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 		{
 			UGameplayStatics::PlaySoundAtLocation(World, SoundSettings.Sound.Get(), FootstepLocation,
 			                                      VolumeMultiplier, SoundPitchMultiplier);
-			
-			UGameplayStatics::PlaySoundAtLocation(World, IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), FootstepLocation,
-														   VolumeMultiplier, SoundPitchMultiplier);
+			if (Mesh->GetOwner() && Mesh->GetOwner()->Implements<UAlsInterface>())
+			{
+				UGameplayStatics::PlaySoundAtLocation(World, IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), FootstepLocation,
+															   VolumeMultiplier, SoundPitchMultiplier);
+			}
 		}
 		else
 		{
@@ -220,7 +222,7 @@ void UAlsAnimNotify_FootstepEffects::SpawnSound(USkeletalMeshComponent* Mesh, co
 														   FootstepRotation.Rotator(),
 														   VolumeMultiplier, SoundPitchMultiplier);
 
-			if (Mesh->GetOwner()->Implements<UAlsInterface>())
+			if (Mesh->GetOwner() && Mesh->GetOwner()->Implements<UAlsInterface>())
 			{
 				Audio = UGameplayStatics::SpawnSoundAtLocation(World, IAlsInterface::Execute_GetUniqueCharacterFootsteps(Mesh->GetOwner()), FootstepLocation, FootstepRotation.Rotator(), VolumeMultiplier, SoundPitchMultiplier);
 			}

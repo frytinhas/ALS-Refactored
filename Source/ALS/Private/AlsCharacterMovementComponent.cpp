@@ -337,7 +337,7 @@ void UAlsCharacterMovementComponent::PhysWalking(const float DeltaTime, int32 It
 
 	// SCOPE_CYCLE_COUNTER(STAT_CharPhysWalking);
 
-	if (DeltaTime < MIN_TICK_TIME)
+ 	if (DeltaTime < MIN_TICK_TIME)
 	{
 		return;
 	}
