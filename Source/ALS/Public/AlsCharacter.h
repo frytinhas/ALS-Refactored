@@ -92,6 +92,9 @@ protected:
 	float DesiredVelocityYawAngle{0.0f};
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|Als Character", Transient)
+	uint8 bHasDesiredVelocity : 1 {false};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|Als Character", Transient)
 	FAlsLocomotionState LocomotionState;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|Als Character", Transient)
@@ -399,6 +402,12 @@ private:
 	void RefreshLocomotion();
 
 	void RefreshLocomotionLate();
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetInitialVelocityYawAngle(float NewVelocityYawAngle);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastSetInitialVelocityYawAngle(float NewVelocityYawAngle);
 
 	// Jumping
 

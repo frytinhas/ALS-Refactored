@@ -532,7 +532,7 @@ void AAlsCharacter::NotifyLocomotionModeChanged(const FGameplayTag& PreviousLoco
 		{
 			static constexpr auto PlayRate{1.3f};
 
-			StartRolling(PlayRate, LocomotionState.bHasSpeed
+			StartRolling(PlayRate, LocomotionState.bHasVelocity
 				                       ? LocomotionState.VelocityYawAngle
 				                       : UE_REAL_TO_FLOAT(FRotator::NormalizeAxis(GetActorRotation().Yaw)));
 		}
@@ -859,7 +859,6 @@ void AAlsCharacter::OnStartCrouch(const float HalfHeightAdjust, const float Scal
 		// The code below essentially undoes the changes that will be made later at the end of the
 		// UCharacterMovementComponent::Crouch() function because they literally break network smoothing when crouching
 		// while the root motion montage is playing, causing the  mesh to take an incorrect location for a while.
-
 		// TODO Check the need for this hack in future engine versions.
 
 		PredictionData->MeshTranslationOffset.Z += ScaledHalfHeightAdjust;
@@ -1408,6 +1407,8 @@ void AAlsCharacter::RefreshLocomotionEarly()
 
 void AAlsCharacter::RefreshLocomotion()
 {
+	const auto bHadVelocity{LocomotionState.bHasVelocity};
+
 	LocomotionState.Velocity = GetVelocity();
 
 	// Determine if the character is moving by getting its speed. The speed equals the length
@@ -1419,26 +1420,55 @@ void AAlsCharacter::RefreshLocomotion()
 
 	static constexpr auto HasSpeedThreshold{1.0f};
 
-	LocomotionState.bHasSpeed = LocomotionState.Speed >= HasSpeedThreshold;
+	LocomotionState.bHasVelocity = LocomotionState.Speed >= HasSpeedThreshold;
 
-	if (LocomotionState.bHasSpeed)
+	if (LocomotionState.bHasVelocity)
 	{
 		LocomotionState.VelocityYawAngle = UE_REAL_TO_FLOAT(UAlsVector::DirectionToAngleXY(LocomotionState.Velocity));
 	}
 
-	if (Settings->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode && GetLocalRole() >= ROLE_AutonomousProxy)
+	if (GetLocalRole() >= ROLE_AutonomousProxy)
 	{
-		FVector DesiredVelocity;
+		auto bSendInitialVelocityYawAngle{LocomotionState.bHasVelocity && !bHadVelocity};
+		auto VelocityYawAngleToSend{LocomotionState.VelocityYawAngle};
 
-		SetDesiredVelocityYawAngle(AlsCharacterMovement->TryConsumePrePenetrationAdjustmentVelocity(DesiredVelocity) &&
-		                           DesiredVelocity.Size2D() >= HasSpeedThreshold
-			                           ? UE_REAL_TO_FLOAT(UAlsVector::DirectionToAngleXY(DesiredVelocity))
-			                           : LocomotionState.VelocityYawAngle);
+		if (Settings->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode)
+		{
+			FVector DesiredVelocity;
+			if (AlsCharacterMovement->TryConsumePrePenetrationAdjustmentVelocity(DesiredVelocity) &&
+			    DesiredVelocity.Size2D() >= HasSpeedThreshold)
+			{
+				bSendInitialVelocityYawAngle = !bHasDesiredVelocity;
+				bHasDesiredVelocity = true;
+
+				SetDesiredVelocityYawAngle(UE_REAL_TO_FLOAT(UAlsVector::DirectionToAngleXY(DesiredVelocity)));
+			}
+			else
+			{
+				bSendInitialVelocityYawAngle = LocomotionState.bHasVelocity && !bHasDesiredVelocity;
+				bHasDesiredVelocity = LocomotionState.bHasVelocity;
+
+				SetDesiredVelocityYawAngle(LocomotionState.VelocityYawAngle);
+			}
+
+			VelocityYawAngleToSend = DesiredVelocityYawAngle;
+		}
+
+		// Implicitly send the initial velocity yaw angle from the owning client to other clients,
+		// since VelocityYawAngle changes are not always detected on the server for very short moves.
+
+		if (bSendInitialVelocityYawAngle &&
+		    (GetLocalRole() == ROLE_AutonomousProxy ||
+		     GetRemoteRole() == ROLE_SimulatedProxy ||
+		     (IsNetMode(NM_ListenServer) && IsLocallyControlled())))
+		{
+			ServerSetInitialVelocityYawAngle(VelocityYawAngleToSend);
+		}
 	}
 
 	// Character is moving if has speed and current acceleration, or if the speed is greater than the moving speed threshold.
 
-	LocomotionState.bMoving = (LocomotionState.bHasInput && LocomotionState.bHasSpeed) ||
+	LocomotionState.bMoving = (LocomotionState.bHasInput && LocomotionState.bHasVelocity) ||
 	                          LocomotionState.Speed > Settings->MovingSpeedThreshold;
 }
 
@@ -1448,6 +1478,21 @@ void AAlsCharacter::RefreshLocomotionLate()
 	{
 		RefreshLocomotionLocationAndRotation();
 		RefreshTargetYawAngleUsingLocomotionRotation();
+	}
+}
+
+void AAlsCharacter::ServerSetInitialVelocityYawAngle_Implementation(const float NewVelocityYawAngle)
+{
+	MulticastSetInitialVelocityYawAngle(NewVelocityYawAngle);
+}
+
+void AAlsCharacter::MulticastSetInitialVelocityYawAngle_Implementation(const float NewVelocityYawAngle)
+{
+	if (GetLocalRole() != ROLE_AutonomousProxy)
+	{
+		DesiredVelocityYawAngle = NewVelocityYawAngle;
+		LocomotionState.VelocityYawAngle = NewVelocityYawAngle;
+		LocomotionState.bRotationTowardsLastInputDirectionBlocked = false;
 	}
 }
 
@@ -1482,6 +1527,7 @@ void AAlsCharacter::MulticastOnJumpedNetworked_Implementation()
 	}
 }
 
+// ReSharper disable once CppMemberFunctionMayBeConst
 void AAlsCharacter::OnJumpedNetworked()
 {
 	if (AnimationInstance.IsValid())
@@ -1528,7 +1574,13 @@ void AAlsCharacter::RefreshGroundedRotation(const float DeltaTime)
 		{
 			// Rotate to the last target yaw angle when not moving (relative to the movement base or not).
 
-			auto TargetYawAngle{LocomotionState.TargetYawAngle};
+			auto TargetYawAngle{
+				LocomotionState.bRotationTowardsLastInputDirectionBlocked
+					? LocomotionState.TargetYawAngle
+					: Settings->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode
+					? DesiredVelocityYawAngle
+					: LocomotionState.VelocityYawAngle
+			};
 
 			if (MovementBase.bHasRelativeLocation && !MovementBase.bHasRelativeRotation &&
 			    Settings->bInheritMovementBaseRotationInVelocityDirectionRotationMode)
