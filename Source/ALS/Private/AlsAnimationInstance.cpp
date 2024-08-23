@@ -535,9 +535,9 @@ void UAlsAnimationInstance::RefreshLook()
 		const auto YawAngle{FRotator3f::NormalizeAxis(LookState.WorldYawAngle - ActorYawAngle)};
 		auto DeltaYawAngle{FRotator3f::NormalizeAxis(TargetYawAngle - YawAngle)};
 
-		if (DeltaYawAngle < -180.0f + UAlsRotation::ClockwiseRotationAngleThreshold)
+		if (DeltaYawAngle > 180.0f - UAlsRotation::CounterClockwiseRotationAngleThreshold)
 		{
-			DeltaYawAngle += 360.0f;
+			DeltaYawAngle -= 360.0f;
 		}
 		else if (FMath::Abs(LocomotionState.YawSpeed) > UE_SMALL_NUMBER && FMath::Abs(TargetYawAngle) > 90.0f)
 		{
@@ -845,6 +845,8 @@ void UAlsAnimationInstance::RefreshStandingMovement()
 	// The interpolation is determined by the gait amount curve that exists on every locomotion cycle so that
 	// the play rate is always in sync with the currently blended animation. The value is also divided by the
 	// stride blend and the capsule scale so that the play rate increases as the stride or scale gets smaller.
+
+	// TODO Automatically calculate the play rate, such as is done in the UAnimDistanceMatchingLibrary::SetPlayrateToMatchSpeed() function.
 
 	const auto WalkRunSpeedAmount{
 		FMath::Lerp(Speed / Settings->Standing.AnimatedWalkSpeed,
@@ -1335,7 +1337,7 @@ void UAlsAnimationInstance::PlayQuickStopAnimation()
 			(LocomotionState.bHasInput ? LocomotionState.InputYawAngle : LocomotionState.TargetYawAngle) - LocomotionState.Rotation.Yaw))
 	};
 
-	RemainingYawAngle = UAlsRotation::RemapAngleForClockwiseRotation(RemainingYawAngle);
+	RemainingYawAngle = UAlsRotation::RemapAngleForCounterClockwiseRotation(RemainingYawAngle);
 
 	// Scale quick stop animation play rate based on how far the character
 	// is going to rotate. At 180 degrees, the play rate will be maximal.
@@ -1691,7 +1693,7 @@ void UAlsAnimationInstance::RefreshTurnInPlace()
 
 	// Select settings based on turn angle and stance.
 
-	const auto bTurnLeft{UAlsRotation::RemapAngleForClockwiseRotation(ViewState.YawAngle) <= 0.0f};
+	const auto bTurnLeft{UAlsRotation::RemapAngleForCounterClockwiseRotation(ViewState.YawAngle) <= 0.0f};
 
 	UAlsTurnInPlaceSettings* TurnInPlaceSettings{nullptr};
 	FName TurnInPlaceSlotName;

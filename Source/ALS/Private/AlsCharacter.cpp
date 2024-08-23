@@ -68,9 +68,9 @@ AAlsCharacter::AAlsCharacter(const FObjectInitializer& ObjectInitializer) : Supe
 bool AAlsCharacter::CanEditChange(const FProperty* Property) const
 {
 	return Super::CanEditChange(Property) &&
-	       Property->GetFName() != GET_MEMBER_NAME_CHECKED(ThisClass, bUseControllerRotationPitch) &&
-	       Property->GetFName() != GET_MEMBER_NAME_CHECKED(ThisClass, bUseControllerRotationYaw) &&
-	       Property->GetFName() != GET_MEMBER_NAME_CHECKED(ThisClass, bUseControllerRotationRoll);
+	       Property->GetFName() != GET_MEMBER_NAME_STRING_VIEW_CHECKED(ThisClass, bUseControllerRotationPitch) &&
+	       Property->GetFName() != GET_MEMBER_NAME_STRING_VIEW_CHECKED(ThisClass, bUseControllerRotationYaw) &&
+	       Property->GetFName() != GET_MEMBER_NAME_STRING_VIEW_CHECKED(ThisClass, bUseControllerRotationRoll);
 }
 #endif
 
@@ -678,11 +678,6 @@ void AAlsCharacter::SetRotationMode(const FGameplayTag& NewRotationMode)
 
 void AAlsCharacter::NotifyRotationModeChanged(const FGameplayTag& PreviousRotationMode)
 {
-	if (RotationMode == AlsRotationModeTags::Aiming)
-	{
-		LocomotionState.AimingYawAngleLimit = 180.0f;
-	}
-
 	OnRotationModeChanged(PreviousRotationMode);
 }
 
@@ -1403,6 +1398,7 @@ void AAlsCharacter::RefreshLocomotionEarly()
 
 	LocomotionState.PreviousVelocity = LocomotionState.Velocity;
 	LocomotionState.PreviousYawAngle = UE_REAL_TO_FLOAT(LocomotionState.Rotation.Yaw);
+	LocomotionState.bAimingLimitAppliedThisFrame = false;
 }
 
 void AAlsCharacter::RefreshLocomotion()
@@ -1479,6 +1475,8 @@ void AAlsCharacter::RefreshLocomotionLate()
 		RefreshLocomotionLocationAndRotation();
 		RefreshTargetYawAngleUsingLocomotionRotation();
 	}
+
+	LocomotionState.bResetAimingLimit = !LocomotionState.bAimingLimitAppliedThisFrame;
 }
 
 void AAlsCharacter::ServerSetInitialVelocityYawAngle_Implementation(const float NewVelocityYawAngle)
@@ -1715,6 +1713,13 @@ bool AAlsCharacter::ConstrainAimingRotation(FRotator& ActorRotation, const float
 	// Limit the actor's rotation when aiming to prevent situations where the lower body noticeably
 	// fails to keep up with the rotation of the upper body when the camera is rotating very fast.
 
+	LocomotionState.bAimingLimitAppliedThisFrame = true;
+
+	if (LocomotionState.bResetAimingLimit)
+	{
+		LocomotionState.AimingYawAngleLimit = 180.0f;
+	}
+
 	auto ViewRelativeAngle{FRotator3f::NormalizeAxis(UE_REAL_TO_FLOAT(ViewState.Rotation.Yaw - ActorRotation.Yaw))};
 
 	if (FMath::Abs(ViewRelativeAngle) <= AlsCharacterConstants::MinAimingYawAngleLimit + UE_KINDA_SMALL_NUMBER)
@@ -1723,7 +1728,7 @@ bool AAlsCharacter::ConstrainAimingRotation(FRotator& ActorRotation, const float
 		return false;
 	}
 
-	ViewRelativeAngle = UAlsRotation::RemapAngleForClockwiseRotation(ViewRelativeAngle);
+	ViewRelativeAngle = UAlsRotation::RemapAngleForCounterClockwiseRotation(ViewRelativeAngle);
 
 	// Secondary constraint. Simply increases the actor's rotation speed. Typically only used when the actor is standing still.
 
@@ -1758,7 +1763,11 @@ bool AAlsCharacter::ConstrainAimingRotation(FRotator& ActorRotation, const float
 
 	ActorRotation.Yaw = FRotator3f::NormalizeAxis(UE_REAL_TO_FLOAT(ViewState.Rotation.Yaw - ViewRelativeAngle));
 
-	return !FMath::IsNearlyEqual(PreviousActorYawAngle, ActorRotation.Yaw);
+	// We use UE_KINDA_SMALL_NUMBER here because even if ViewRelativeAngle hasn't
+	// changed, converting it back to ActorRotation.Yaw may introduce a rounding
+	// error, and FMath::IsNearlyEqual() with default arguments will return false.
+
+	return !FMath::IsNearlyEqual(PreviousActorYawAngle, ActorRotation.Yaw, UE_KINDA_SMALL_NUMBER);
 }
 
 float AAlsCharacter::CalculateGroundedMovingRotationInterpolationSpeed() const
