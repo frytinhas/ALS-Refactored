@@ -28,7 +28,6 @@ namespace AlsStanceTags
 	UE_DEFINE_GAMEPLAY_TAG(Standing, FName{TEXTVIEW("Als.Stance.Standing")})
 	UE_DEFINE_GAMEPLAY_TAG(Crouching, FName{TEXTVIEW("Als.Stance.Crouching")})
 	UE_DEFINE_GAMEPLAY_TAG(Proning, FName{TEXTVIEW("Als.Stance.Proning")})
-	UE_DEFINE_GAMEPLAY_TAG(Sliding, FName{TEXTVIEW("Als.Stance.Sliding")})
 }
 
 namespace AlsGaitTags
