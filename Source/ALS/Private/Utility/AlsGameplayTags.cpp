@@ -53,6 +53,7 @@ namespace AlsOverlayModeTags
 	UE_DEFINE_GAMEPLAY_TAG(Binoculars, FName{TEXTVIEW("Als.OverlayMode.Binoculars")})
 	UE_DEFINE_GAMEPLAY_TAG(Box, FName{TEXTVIEW("Als.OverlayMode.Box")})
 	UE_DEFINE_GAMEPLAY_TAG(Barrel, FName{TEXTVIEW("Als.OverlayMode.Barrel")})
+	UE_DEFINE_GAMEPLAY_TAG(Inspecting, FName{TEXTVIEW("Als.OverlayMode.Inspecting")})
 }
 
 namespace AlsLocomotionActionTags
