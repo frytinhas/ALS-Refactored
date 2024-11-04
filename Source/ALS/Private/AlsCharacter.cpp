@@ -981,6 +981,7 @@ FGameplayTag AAlsCharacter::CalculateMaxAllowedGait() const
 	{
 		return DesiredGait;
 	}
+	
 
 	if (CanSprint())
 	{
@@ -1017,10 +1018,17 @@ bool AAlsCharacter::CanSprint() const
 	// If the character is in view direction rotation mode, only allow sprinting if there is
 	// input and if the input direction is aligned with the view direction within 50 degrees.
 
-	if (!LocomotionState.bHasInput || Stance != AlsStanceTags::Standing ||
-	    ((bDesiredAiming || DesiredRotationMode == AlsRotationModeTags::Aiming) && !Settings->bSprintHasPriorityOverAiming))
+	if (GetViewMode() == AlsViewModeTags::ThirdPerson)
 	{
-		return false;
+		if (!LocomotionState.bHasInput || Stance != AlsStanceTags::Standing ||
+			((bDesiredAiming || DesiredRotationMode == AlsRotationModeTags::Aiming) && !Settings->bSprintHasPriorityOverAiming))
+		{
+			return false;
+		}
+	}
+	else
+	{
+		return true;
 	}
 
 	if (ViewMode != AlsViewModeTags::FirstPerson &&
