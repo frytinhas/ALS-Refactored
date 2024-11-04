@@ -313,6 +313,7 @@ private:
 
 	FGameplayTag CalculateActualGait(const FGameplayTag& MaxAllowedGait) const;
 
+protected:
 	virtual bool CanSprint() const;
 
 	// Overlay Mode
